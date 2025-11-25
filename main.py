@@ -1,6 +1,7 @@
 import logging
 import time
-import requests  # << THÊM IMPORT NÀY
+import requests
+import urllib.parse  # << THÊM IMPORT NÀY
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -144,20 +145,33 @@ def check_and_notify_matches(driver):
                 player_names = [n.text.strip() for n in name_elems if n.text.strip()]
 
                 if len(player_names) >= 2:
+                    p1 = player_names[0]
+                    p2 = player_names[1]
+
                     # tạo ID duy nhất cho trận dựa trên 2 tên
-                    match_id = f"{player_names[0]}|{player_names[1]}"
+                    match_id = f"{p1}|{p2}"
 
                     if match_id in sent_matches:
                         logger.info(
-                            f"Trận {idx}: {player_names[0]} vs {player_names[1]} – Tỉ số: {score_text} (đã gửi trước đó, bỏ qua)"
+                            f"Trận {idx}: {p1} vs {p2} – Tỉ số: {score_text} (đã gửi trước đó, bỏ qua)"
                         )
                         continue  # không gửi lại nữa
+
+                    # Tạo link tra cứu phong độ trên 24live (thông qua Google, filter site:24live.com)
+                    p1_query = urllib.parse.quote_plus(f"{p1} table tennis site:24live.com")
+                    p2_query = urllib.parse.quote_plus(f"{p2} table tennis site:24live.com")
+
+                    p1_url = f"https://www.google.com/search?q={p1_query}"
+                    p2_url = f"https://www.google.com/search?q={p2_query}"
 
                     # trận mới -> log + gửi Telegram
                     message = (
                         f"TRẬN MỚI 1:2 / 2:1\n"
-                        f"{player_names[0]} vs {player_names[1]}\n"
-                        f"Tỉ số hiện tại: {score_text}"
+                        f"{p1} vs {p2}\n"
+                        f"Tỉ số hiện tại: {score_text}\n\n"
+                        f"Tra cứu phong độ trên 24live (qua Google):\n"
+                        f"{p1}: {p1_url}\n"
+                        f"{p2}: {p2_url}"
                     )
                     logger.info(message)
                     send_telegram_message(message)
@@ -297,7 +311,7 @@ def main():
         try:
             logger.info("Đang nhấn nút 'Áp dụng'...")
             apply_btn = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable(((
+                EC.element_to_be_clickable((( 
                     By.CSS_SELECTOR,
                     "button.eventlist_asia_fe_SelectLeaguesModal_applyButton"
                 )))
